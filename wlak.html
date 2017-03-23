@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>小人的动画2</title>
+	<style>
+		canvas {
+			border: 1px solid #000;
+		}
+	</style>
+</head>
+<body>
+	<canvas id="canvas" width="600" height="400"></canvas>
+</body>
+<script>
+	function toAngle( radian ) {
+		return 180 * radian / Math.PI;
+	}
+	function toRadian( angle ) {
+		return Math.PI * angle / 180;
+	}
+	var canvas = document.getElementById('canvas'),
+		ctx = canvas.getContext('2d');
+	function WalkingMan(config) {
+		if(!config.imgSrc || !config.frame || !config.context) throw new Error('参数错误.');
+		this.context = config.context;
+		this.img = new Image();
+		this.imgSrc = config.imgSrc;
+		this.img.src = config.imgSrc;
+		this.x = config.x || 0;
+		this.y = config.y || 0;
+		this.frame = config.frame;
+		this.width = config.width;
+		this.height = config.height;
+		this.direction = config.direction || 0;
+		this.curFrame = config.curFrame;
+		this.step = config.step;		
+		this.fps = config.fps;
+
+		// 是否正在散步
+		this.isWalking = false; 
+		// 存储定时器id，以便停止动画
+		this.timer = null;
+
+	}
+	WalkingMan.prototype = {
+		constructor: WalkingMan,
+		draw: function() { // 将当前帧的小人绘制出来
+			// 1: 清除画布
+			this.context.clearRect(0, 0, this.context.canvas.width, this.context.canvas.height);
+			// 2: 绘制当前帧的小人
+			this.context.drawImage(this.img, this.curFrame * this.width, this.direction * this.height, 
+					this.width, this.height, this.x, this.y, this.width, this.height);
+		},
+		update: function() {// 改变动画帧，以及小人所处的位置
+			// ++this.curFrame;
+			// if(this.curFrame > 3) this.curFrame = 0;
+			var cvs = this.context.canvas;
+			this.curFrame = ++this.curFrame % this.frame;
+			switch( this.direction ){
+				case 0: // down
+					this.y += this.step;
+					if( this.y > cvs.height ) this.y = -this.height - 10;
+					break;
+				case 1: // left
+					this.x -= this.step;
+					if( this.x < -this.width ) this.x = cvs.width + 10;
+					break;
+				case 2: // right
+					this.x += this.step;
+					if( this.x > cvs.width ) this.x = -this.width - 10;
+					break;
+				case 3: // up
+					this.y -= this.step;
+					if( this.y < -this.height ) this.y = cvs.height + 10;
+					break;
+			}
+		},
+		stop:function() {
+			// 如果小人正在散步，就可以停止。
+			if(this.isWalking){
+				// 给小人的isWalking是否散步的状态赋值为false；
+				this.isWalking = false;
+				// 清除定时器，停止动画
+				window.clearInterval(this.timer);
+			}
+		},
+		walk:function() {
+			var self = this;
+			// 小人已经在散步了，所以给isWalking状态赋值为true
+			this.isWalking = true;
+			// 然后启动定时器，就产生动画
+			this.timer = setInterval(function() {
+				self.update();
+				self.draw();
+			}, 1000 / this.fps);
+		},
+		bind:function() {
+			var self = this;
+			// 给整个文档注册键盘按下事件。
+			window.document.addEventListener('keydown', function(e) {
+				var kCode = e.keyCode;// keyCode存储的是用户按下的键盘的ascll值				
+				if( kCode === 32 ){
+					if( self.isWalking ) self.stop();
+					else self.walk();
+				}
+				if( !self.isWalking ) return;// 若小人没有在散步，之后的代码不需要执行。
+				console.log( kCode );
+				switch( kCode ){
+					case 37: // left
+					case 65: // A
+						self.direction = 1;
+						break;
+					case 38: // up
+					case 87: // W
+						self.direction = 3;
+						break;
+					case 39: // right
+					case 68: // D
+						self.direction = 2;
+						break;
+					case 40: // down
+					case 83: // S
+						self.direction = 0;
+						break;
+				}
+			});
+		},
+		render:function() {
+			var self = this;
+			// 给img添加加载完毕事件
+			// 当img图片加载完毕，执行bind方法，绑定keydown事件
+			// 并绘制一次小人
+			this.img.addEventListener('load', function() {
+				self.bind();
+				self.draw();
+			});
+		}
+	};
+	var wm = new WalkingMan({
+		context: ctx, // 绘图工具
+		imgSrc: 'imgs/DMMban.png',// 图像的地址
+		x: 0, // 绘制图像的x坐标
+		y: 0, // 绘制图像的y坐标
+		width: 40, // 绘制图像的宽
+		height: 65,// 绘制图像的高
+		direction: 0, // 绘制小人的行走方向（0：下；1：左；2：右；3：上）
+		curFrame: 0,  // 小人的当前帧图像 
+		frame: 4,	  // 动画的最大帧
+		step: 3,	  // 小人的步伐
+		fps: 6.25
+	});	
+	wm.render();	
+</script>
+</html>
